@@ -190,8 +190,8 @@ void ClearBridgeSimulatedSignalMapping()
 	_long_bridge_signal_sim_map.clear();
 }
 
-btree::btree_set<uint32_t> _bridge_signal_style_map;
-static_assert(MAX_MAP_TILES_BITS + 4 <= 32);
+btree::btree_set<uint64_t> _bridge_signal_style_map;
+static_assert(MAX_MAP_TILES_BITS + 4 <= 64);
 static_assert(1 << 4 <= MAX_NEW_SIGNAL_STYLES + 1);
 
 void SetBridgeSignalStyle(TileIndex t, uint8_t style)
@@ -200,21 +200,21 @@ void SetBridgeSignalStyle(TileIndex t, uint8_t style)
 		/* No style allocated before */
 		if (!HasBit(_m[t].m3, 7)) return;
 
-		auto iter = _bridge_signal_style_map.lower_bound(t.base() << 4);
-		if (iter != _bridge_signal_style_map.end() && *iter >> 4 == t) _bridge_signal_style_map.erase(iter);
+		auto iter = _bridge_signal_style_map.lower_bound(static_cast<uint64_t>(t.base()) << 4);
+		if (iter != _bridge_signal_style_map.end() && *iter >> 4 == t.base()) _bridge_signal_style_map.erase(iter);
 		ClrBit(_m[t].m3, 7);
 	} else {
-		auto iter = _bridge_signal_style_map.lower_bound(t.base() << 4);
-		if (iter != _bridge_signal_style_map.end() && *iter >> 4 == t) iter = _bridge_signal_style_map.erase(iter);
-		_bridge_signal_style_map.insert(iter, (t.base() << 4) | style);
+		auto iter = _bridge_signal_style_map.lower_bound(static_cast<uint64_t>(t.base()) << 4);
+		if (iter != _bridge_signal_style_map.end() && *iter >> 4 == t.base()) iter = _bridge_signal_style_map.erase(iter);
+		_bridge_signal_style_map.insert(iter, (static_cast<uint64_t>(t.base()) << 4) | style);
 		SetBit(_m[t].m3, 7);
 	}
 }
 
 uint8_t GetBridgeSignalStyleExtended(TileIndex t)
 {
-	auto iter = _bridge_signal_style_map.lower_bound(t.base() << 4);
-	if (iter != _bridge_signal_style_map.end() && *iter >> 4 == t) return (*iter) & 0xF;
+	auto iter = _bridge_signal_style_map.lower_bound(static_cast<uint64_t>(t.base()) << 4);
+	if (iter != _bridge_signal_style_map.end() && *iter >> 4 == t.base()) return (*iter) & 0xF;
 	return 0;
 }
 

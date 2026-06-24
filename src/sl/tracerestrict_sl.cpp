@@ -20,10 +20,35 @@ static const NamedSaveLoad _trace_restrict_mapping_desc[] = {
 };
 
 /**
+ * On maps larger than 2^28 tiles the TraceRestrictRefId (tile << 3 | track) no longer fits in the 32-bit
+ * savegame array index, so the ref is stored as an explicit 64-bit field with a sequential array index.
+ * Gated on XSLFI_LARGE_MAP_64BIT_KEYS (only set for such maps), so normal saves keep the old format.
+ */
+struct TraceRestrictMappingSaveItem {
+	uint64_t ref;
+	TraceRestrictProgramID program_id;
+};
+
+static const NamedSaveLoad _trace_restrict_mapping_64bit_desc[] = {
+	NSL("ref",        SLE_VAR(TraceRestrictMappingSaveItem, ref,        SLE_UINT64)),
+	NSL("program_id", SLE_VAR(TraceRestrictMappingSaveItem, program_id, SLE_UINT32)),
+};
+
+/**
  * Load mappings
  */
 static void Load_TRRM()
 {
+	if (SlXvIsFeaturePresent(XSLFI_LARGE_MAP_64BIT_KEYS)) {
+		SaveLoadTableData slt = SlTableHeaderOrRiff(_trace_restrict_mapping_64bit_desc);
+		while (SlIterateArray() != -1) {
+			TraceRestrictMappingSaveItem item;
+			SlObjectLoadFiltered(&item, slt);
+			_tracerestrictprogram_mapping[item.ref] = TraceRestrictMappingItem(item.program_id);
+		}
+		return;
+	}
+
 	SaveLoadTableData slt = SlTableHeaderOrRiff(_trace_restrict_mapping_desc);
 
 	int index;
@@ -38,10 +63,21 @@ static void Load_TRRM()
  */
 static void Save_TRRM()
 {
+	if (SlXvIsFeaturePresent(XSLFI_LARGE_MAP_64BIT_KEYS)) {
+		SaveLoadTableData slt = SlTableHeader(_trace_restrict_mapping_64bit_desc);
+		uint index = 0;
+		for (auto &it : _tracerestrictprogram_mapping) {
+			SlSetArrayIndex(index++);
+			TraceRestrictMappingSaveItem item{ it.first, it.second.program_id };
+			SlObjectSaveFiltered(&item, slt);
+		}
+		return;
+	}
+
 	SaveLoadTableData slt = SlTableHeader(_trace_restrict_mapping_desc);
 
 	for (auto &it : _tracerestrictprogram_mapping) {
-		SlSetArrayIndex(it.first);
+		SlSetArrayIndex(static_cast<uint>(it.first));
 		TraceRestrictMappingItem &item = it.second;
 		SlObjectSaveFiltered(&item, slt);
 	}

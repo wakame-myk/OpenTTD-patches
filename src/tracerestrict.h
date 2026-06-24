@@ -31,8 +31,8 @@ struct Window;
 
 struct TraceRestrictProgram;
 
-/** Tile/track mapping type. */
-typedef uint32_t TraceRestrictRefId;
+/** Tile/track mapping type. Packed as (tile << 3) | track, so must be wide enough for the largest map. */
+typedef uint64_t TraceRestrictRefId;
 
 /** Type of the pool for trace restrict programs. */
 using TraceRestrictProgramPool = Pool<TraceRestrictProgram, TraceRestrictProgramID, 64>;

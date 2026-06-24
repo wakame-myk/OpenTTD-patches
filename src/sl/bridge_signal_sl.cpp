@@ -24,6 +24,16 @@ static const NamedSaveLoad _bridge_signal_style_map_desc[] = {
 	NSL("signal_style_map", SLE_VARVEC(BridgeSignalStyleMapStub, signal_style_map, SLE_UINT32)),
 };
 
+/* On maps larger than 2^28 tiles the packed style key (tile << 4 | style) no longer fits in uint32,
+ * so it is stored as uint64. Gated on XSLFI_LARGE_MAP_64BIT_KEYS so normal saves keep the uint32 format. */
+struct BridgeSignalStyleMap64Stub {
+	std::vector<uint64_t> signal_style_map;
+};
+
+static const NamedSaveLoad _bridge_signal_style_map_64bit_desc[] = {
+	NSL("signal_style_map", SLE_VARVEC(BridgeSignalStyleMap64Stub, signal_style_map, SLE_UINT64)),
+};
+
 static void Load_XBSS()
 {
 	SaveLoadTableData slt = SlTableHeaderOrRiff(_long_bridge_signal_storage_desc);
@@ -49,11 +59,19 @@ static void Save_XBSS()
 static void Load_XBST()
 {
 	if (SlIsTableChunk()) {
-		SaveLoadTableData slt = SlTableHeader(_bridge_signal_style_map_desc);
-		BridgeSignalStyleMapStub stub{};
-		SlLoadTableObjectChunk(slt, &stub);
-		_bridge_signal_style_map.insert(stub.signal_style_map.begin(), stub.signal_style_map.end());
+		if (SlXvIsFeaturePresent(XSLFI_LARGE_MAP_64BIT_KEYS)) {
+			SaveLoadTableData slt = SlTableHeader(_bridge_signal_style_map_64bit_desc);
+			BridgeSignalStyleMap64Stub stub{};
+			SlLoadTableObjectChunk(slt, &stub);
+			_bridge_signal_style_map.insert(stub.signal_style_map.begin(), stub.signal_style_map.end());
+		} else {
+			SaveLoadTableData slt = SlTableHeader(_bridge_signal_style_map_desc);
+			BridgeSignalStyleMapStub stub{};
+			SlLoadTableObjectChunk(slt, &stub);
+			_bridge_signal_style_map.insert(stub.signal_style_map.begin(), stub.signal_style_map.end());
+		}
 	} else {
+		/* Old RIFF-format saves predate large maps, so the keys are always 32-bit. */
 		size_t count = SlGetFieldLength() / sizeof(uint32_t);
 		for (size_t i = 0; i < count; i++) {
 			_bridge_signal_style_map.insert(SlReadUint32());
@@ -63,14 +81,27 @@ static void Load_XBST()
 
 static void Save_XBST()
 {
+	if (SlXvIsFeaturePresent(XSLFI_LARGE_MAP_64BIT_KEYS)) {
+		SaveLoadTableData slt = SlTableHeader(_bridge_signal_style_map_64bit_desc);
+
+		SlSetArrayIndex(0);
+		const size_t count = _bridge_signal_style_map.size();
+		SlSetLength(SlGetGammaLength(count) + (count * 8));
+		SlWriteSimpleGamma(count);
+		for (uint64_t val : _bridge_signal_style_map) {
+			SlWriteUint64(val);
+		}
+		return;
+	}
+
 	SaveLoadTableData slt = SlTableHeader(_bridge_signal_style_map_desc);
 
 	SlSetArrayIndex(0);
 	const size_t count = _bridge_signal_style_map.size();
 	SlSetLength(SlGetGammaLength(count) + (count * 4));
 	SlWriteSimpleGamma(count);
-	for (uint32_t val : _bridge_signal_style_map) {
-		SlWriteUint32(val);
+	for (uint64_t val : _bridge_signal_style_map) {
+		SlWriteUint32(static_cast<uint32_t>(val));
 	}
 }
 

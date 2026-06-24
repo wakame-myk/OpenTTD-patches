@@ -157,7 +157,7 @@ static void Load_MAP5()
 
 static void Load_MAP6()
 {
-	const uint32_t size = Map::Size();
+	const size_t size = Map::Size();
 
 	TileExtended *me = _me.tile_data;
 	if (IsSavegameVersionBefore(SLV_42)) {
@@ -201,7 +201,7 @@ static void Load_WMAP()
 	assert(_sl_xv_feature_versions[XSLFI_WHOLE_MAP_CHUNK] == 1 || _sl_xv_feature_versions[XSLFI_WHOLE_MAP_CHUNK] == 2);
 
 	ReadBuffer *reader = ReadBuffer::GetCurrent();
-	const uint32_t size = Map::Size();
+	const size_t size = Map::Size();
 
 	if constexpr (std::endian::native == std::endian::little) {
 		reader->CopyBytes((uint8_t *) _m.tile_data, size * 8);
@@ -255,7 +255,7 @@ static void Save_WMAP()
 	assert(_sl_xv_feature_versions[XSLFI_WHOLE_MAP_CHUNK] == 2);
 
 	MemoryDumper *dumper = MemoryDumper::GetCurrent();
-	const uint32_t size = Map::Size();
+	const size_t size = Map::Size();
 	SlSetLength(size * 12);
 
 	if constexpr (std::endian::native == std::endian::little) {
@@ -358,7 +358,7 @@ static void Save_MAP()
 
 	static_assert(std::is_same_v<typename T::FieldT, uint8_t> || std::is_same_v<typename T::FieldT, uint16_t>);
 
-	const uint32_t size = Map::Size();
+	const size_t size = Map::Size();
 	SlSetLength(size * sizeof(typename T::FieldT));
 
 	T map_reader{};

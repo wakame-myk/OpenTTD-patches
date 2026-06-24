@@ -2830,7 +2830,7 @@ static void SlLoadChunk(const ChunkHandler &ch)
 					len = SlReadUint32();
 				}
 				if (ext_flags & SLCEHF_BIG_RIFF) {
-					len |= SlReadUint32() << 28;
+					len |= static_cast<size_t>(SlReadUint32()) << 28;
 				}
 
 				_sl.obj_len = len;

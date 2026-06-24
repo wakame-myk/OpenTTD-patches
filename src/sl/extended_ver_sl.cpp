@@ -108,6 +108,7 @@ const std::initializer_list<SlxiSubChunkInfo> _sl_xv_sub_chunk_infos = {
 	{ XSLFI_ORDER_OCCUPANCY,                  XSCF_NULL,                2,   2, "order_occupancy",                  nullptr, nullptr, nullptr          },
 	{ XSLFI_MORE_COND_ORDERS,                 XSCF_NULL,               21,  21, "more_cond_orders",                 nullptr, nullptr, nullptr          },
 	{ XSLFI_EXTRA_LARGE_MAP,                  XSCF_NULL,                0,   1, "extra_large_map",                  nullptr, nullptr, nullptr          },
+	{ XSLFI_LARGE_MAP_64BIT_KEYS,             XSCF_NULL,                0,   1, "large_map_64bit_keys",             nullptr, nullptr, nullptr          },
 	{ XSLFI_REVERSE_AT_WAYPOINT,              XSCF_NULL,                1,   1, "reverse_at_waypoint",              nullptr, nullptr, nullptr          },
 	{ XSLFI_VEH_LIFETIME_PROFIT,              XSCF_NULL,                1,   1, "veh_lifetime_profit",              nullptr, nullptr, nullptr          },
 	{ XSLFI_LINKGRAPH_DAY_SCALE,              XSCF_NULL,                7,   7, "linkgraph_day_scale",              nullptr, nullptr, nullptr          },
@@ -326,7 +327,15 @@ void SlXvSetCurrentState()
 	if (Map::SizeX() > 8192 || Map::SizeY() > 8192) {
 		_sl_xv_feature_versions[XSLFI_EXTRA_LARGE_MAP] = 1;
 	}
-	if (IsScenarioSave()) {
+	if (Map::Size() > (1U << 28)) {
+		/* Tile-derived packed keys (trace-restrict mapping ref = tile << 3, bridge signal style = tile << 4)
+		 * exceed the widths usable by the 32-bit savegame array index / uint32 storage, so switch those
+		 * chunks to their 64-bit formats. */
+		_sl_xv_feature_versions[XSLFI_LARGE_MAP_64BIT_KEYS] = 1;
+	}
+	if (IsScenarioSave() || static_cast<size_t>(Map::Size()) * 12 >= (static_cast<size_t>(1) << 32)) {
+		/* The combined WMAP chunk is a single RIFF chunk of Map::Size() * 12 bytes, which must stay below the
+		 * 4 GB per-chunk limit; fall back to the per-field map chunks for very large maps. */
 		_sl_xv_feature_versions[XSLFI_WHOLE_MAP_CHUNK] = 0;
 	}
 	if (IsNetworkServerSave()) {

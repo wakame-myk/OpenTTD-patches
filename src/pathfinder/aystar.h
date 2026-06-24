@@ -156,15 +156,15 @@ struct AyStar {
 
 protected:
 
-	inline uint32_t HashKey(TileIndex tile, Trackdir td) const { return tile.base() | (td << 28); }
+	inline uint64_t HashKey(TileIndex tile, Trackdir td) const { return tile.base() | (static_cast<uint64_t>(td) << 32); }
 
 	PodPool<PathNode*, sizeof(PathNode), 8192> closedlist_nodes;
-	robin_hood::unordered_flat_map<uint32_t, uint32_t> closedlist_hash;
+	robin_hood::unordered_flat_map<uint64_t, uint32_t> closedlist_hash;
 
 	BinaryHeap openlist_queue;  ///< The open queue.
 
 	PodPool<OpenListNode*, sizeof(OpenListNode), 8192> openlist_nodes;
-	robin_hood::unordered_flat_map<uint32_t, uint32_t> openlist_hash;
+	robin_hood::unordered_flat_map<uint64_t, uint32_t> openlist_hash;
 
 	void OpenListAdd(PathNode *parent, const AyStarNode *node, int f, int g);
 	uint32_t OpenListIsInList(const AyStarNode *node);

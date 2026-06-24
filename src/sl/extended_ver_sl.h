@@ -207,6 +207,8 @@ enum SlXvFeatureIndex {
 	XSLFI_JOKERPP,                                ///< This is a JokerPP game, use this for loading some settings
 	XSLFI_CHILLPP,                                ///< This is a ChillPP game, use this for loading some settings
 
+	XSLFI_LARGE_MAP_64BIT_KEYS,                   ///< Large map (> 2^28 tiles): trace-restrict mapping and bridge signal style map use 64-bit packed keys
+
 	XSLFI_SIZE,                                   ///< Total count of features, including null feature
 };
 

@@ -31,7 +31,7 @@ struct LongBridgeSignalStorage {
 
 extern robin_hood::unordered_flat_map<TileIndex, LongBridgeSignalStorage> _long_bridge_signal_sim_map;
 
-extern btree::btree_set<uint32_t> _bridge_signal_style_map;
+extern btree::btree_set<uint64_t> _bridge_signal_style_map;
 
 SignalState GetBridgeEntranceSimulatedSignalStateExtended(TileIndex t, uint16_t signal);
 
