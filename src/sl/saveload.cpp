@@ -928,7 +928,10 @@ void SlSetLength(size_t length)
 					 * If we have more than 28 bits, use an extra uint32_t and
 					 * signal this using the extended chunk header */
 #ifdef POINTER_IS_64BIT
-					assert(length < (1LL << 32));
+					/* The big-RIFF encoding below supports up to 60 bits. The largest single chunk is the
+					 * uint16 map array (m2/m8) at Map::Size() * 2 bytes, which is exactly 2^32 at the maximum
+					 * 2^31-tile map, so allow chunks slightly above 4 GB while still guarding against absurd values. */
+					assert(length < (1LL << 33));
 #endif
 					if (length >= (1 << 28)) {
 						/* write out extended chunk header */
@@ -2937,7 +2940,7 @@ static void SlLoadCheckChunk(const ChunkHandler *ch, uint32_t chunk_id)
 				}
 				if (ext_flags & SLCEHF_BIG_RIFF) {
 					uint64_t full_len = len | (static_cast<uint64_t>(SlReadUint32()) << 28);
-					if (full_len >= (1LL << 32)) {
+					if (full_len >= (1LL << 33)) {
 						SlErrorCorruptFmt("Chunk size too large: {} in {}", full_len, ChunkIDDumper()(chunk_id));
 					}
 					len = static_cast<size_t>(full_len);

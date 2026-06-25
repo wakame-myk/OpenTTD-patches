@@ -383,10 +383,10 @@ bool EnoughContiguousTilesMatchingCondition(TileIndex tile, uint threshold, Test
 	dbg_assert(proc != nullptr);
 	if (threshold == 0) return true;
 
-	static_assert(MAX_MAP_TILES_BITS <= 30);
+	static_assert(MAX_MAP_TILES_BITS <= 32);
 
 	robin_hood::unordered_flat_set<TileIndex> processed_tiles;
-	jgr::ring_buffer<uint32_t> candidates;
+	jgr::ring_buffer<uint64_t> candidates;
 	uint matching_count = 0;
 
 	auto process_tile = [&](TileIndex t, DiagDirection exclude_onward_dir) {
@@ -399,7 +399,7 @@ bool EnoughContiguousTilesMatchingCondition(TileIndex tile, uint threshold, Test
 					if (dir == exclude_onward_dir) continue;
 					TileIndex neighbour_tile = AddTileIndexDiffCWrap(t, TileIndexDiffCByDiagDir(dir));
 					if (IsValidTile(neighbour_tile)) {
-						candidates.push_back(neighbour_tile.base() | (ReverseDiagDir(dir) << 30));
+						candidates.push_back(neighbour_tile.base() | (static_cast<uint64_t>(ReverseDiagDir(dir)) << 32));
 					}
 				}
 			}
@@ -408,10 +408,10 @@ bool EnoughContiguousTilesMatchingCondition(TileIndex tile, uint threshold, Test
 	process_tile(tile, INVALID_DIAGDIR);
 
 	while (matching_count < threshold && !candidates.empty()) {
-		uint32_t next = candidates.front();
+		uint64_t next = candidates.front();
 		candidates.pop_front();
-		TileIndex t(GB(next, 0, 30));
-		DiagDirection exclude_onward_dir = (DiagDirection)GB(next, 30, 2);
+		TileIndex t((uint32_t)next);
+		DiagDirection exclude_onward_dir = (DiagDirection)(next >> 32);
 		process_tile(t, exclude_onward_dir);
 	}
 	return matching_count >= threshold;
