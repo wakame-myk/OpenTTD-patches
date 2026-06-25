@@ -39,6 +39,7 @@
 #include "../safeguards.h"
 
 Randomizer _random, _interactive_random;
+thread_local Randomizer *_random_override = nullptr;
 
 /**
  * Generate the next pseudo random number
@@ -98,7 +99,7 @@ uint32_t DoRandom(int line, const char *file)
 		Debug(random, 0, "{}; {:04x}; {:02x}; {}:{}", debug_date_dumper().HexDate(), _frame_counter, _current_company, file, line);
 	}
 
-	return _random.Next();
+	return CurrentGameRandomizer().Next();
 }
 
 uint32_t DoRandomRange(uint32_t limit, int line, const char *file)

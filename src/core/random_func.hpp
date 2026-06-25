@@ -31,6 +31,39 @@ struct Randomizer {
 extern Randomizer _random; ///< Random used in the game state calculations
 extern Randomizer _interactive_random; ///< Random used everywhere else, where it does not (directly) influence the game state
 
+/**
+ * Per-thread override for the game randomizer.
+ *
+ * When non-null, Random()/RandomRange()/Chance16() draw from this randomizer instead of the global
+ * #_random. This is used by the deterministic parallel tile loop: each region is given its own
+ * randomizer (seeded deterministically from the tick and region), so the values a tile loop proc
+ * draws depend only on which region/tick it runs in, not on thread scheduling or execution order.
+ *
+ * It is null in all normal contexts (the global #_random is used), so the redirect is a single
+ * well-predicted branch. Set/cleared via the RAII helper #GameRandomOverride.
+ */
+extern thread_local Randomizer *_random_override;
+
+/** Resolve the randomizer that game-state Random() calls should currently use on this thread. */
+inline Randomizer &CurrentGameRandomizer()
+{
+	return (_random_override != nullptr) ? *_random_override : _random;
+}
+
+/**
+ * RAII helper that redirects this thread's game-state Random() to a given randomizer for the
+ * duration of the scope, restoring the previous override on destruction.
+ */
+struct GameRandomOverride {
+	Randomizer *saved;
+
+	explicit GameRandomOverride(Randomizer *r) : saved(_random_override) { _random_override = r; }
+	~GameRandomOverride() { _random_override = this->saved; }
+
+	GameRandomOverride(const GameRandomOverride &) = delete;
+	GameRandomOverride &operator=(const GameRandomOverride &) = delete;
+};
+
 /** Stores the state of all random number generators */
 struct SavedRandomSeeds {
 	Randomizer random;
@@ -85,7 +118,7 @@ void InitialiseRandomSeeds();
 #else
 	static inline uint32_t Random()
 	{
-		return _random.Next();
+		return CurrentGameRandomizer().Next();
 	}
 
 	/**
@@ -97,7 +130,7 @@ void InitialiseRandomSeeds();
 	 */
 	static inline uint32_t RandomRange(uint32_t limit)
 	{
-		return _random.Next(limit);
+		return CurrentGameRandomizer().Next(limit);
 	}
 #endif
 
